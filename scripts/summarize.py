@@ -34,15 +34,18 @@ for series, rows in SERIES.items():
         continue
     first = statistics.median(runs[rows[0][0]])
     print(f'\n### {TITLES[series]}\n')
-    print('| Harness | Median, s | Runs (min – max) | vs. the row above | vs. the first row |')
+    slower = series == 'plus-one'
+    last = 'slower than the first row' if slower else 'faster than the first row'
+    print(f'| Harness | Median, s | Runs (min – max) | vs. the row above | {last} |')
     print('|---|---:|---:|---:|---:|')
     above = None
     for harness, label in rows:
         seconds = runs[harness]
         median = statistics.median(seconds)
         step = f'×{above / median:.2f}' if above and series == 'cumulative' else ''
+        ratio = median / first if slower else first / median
         print(
             f'| {label}{" — FAILED" if harness in failed else ""}<br>`{harness}` | {median:.1f} '
-            f'| {len(seconds)} ({min(seconds):.1f} – {max(seconds):.1f}) | {step} | ×{first / median:.2f} |'
+            f'| {len(seconds)} ({min(seconds):.1f} – {max(seconds):.1f}) | {step} | ×{ratio:.2f} |'
         )
         above = median

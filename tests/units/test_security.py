@@ -107,7 +107,8 @@ def test_token_signed_with_another_key():
     assert security.read_access_token(forged) is None
 
 
-def test_token_with_another_algorithm():
+def test_token_with_another_algorithm(monkeypatch):
+    monkeypatch.setattr(settings, 'SECRET_KEY', 'k' * 64)
     forged = jwt.encode(
         {'sub': '7', 'sid': 42, 'exp': datetime.now(UTC) + timedelta(minutes=5)}, settings.SECRET_KEY,
         algorithm='HS512',

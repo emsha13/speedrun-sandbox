@@ -1,112 +1,114 @@
 # fastapi-pytest-speedrun
 
-One small FastAPI service, one test suite of 232 tests, and eight versions of the test harness
-under it. The tests never change. Each harness differs from the one before by a single idea, and
-each is timed.
+One FastAPI service, one test suite of 1,300 tests, and a test harness put together from
+independent choices — each with a slow value and a fast one. The tests never change. What changes
+is the harness under them, one choice at a time, and every combination is timed.
 
-The service is the part nearly every application has: registration with a mailed code, sign-in,
-refresh tokens, password reset, change of password and of address, a profile, a list of sessions,
-deletion of the account. FastAPI, SQLAlchemy 2 (async), asyncpg, Postgres, bcrypt, PyJWT. The tests
-go through the HTTP door against a real Postgres.
+The service is the part nearly every application has: registration with a mailed code, sign-in by
+address or by phone number, refresh tokens, password reset, change of password, of address and of
+number, a profile, a list of sessions, request limits, and the users as an admin sees them.
+FastAPI, SQLAlchemy 2 (async), asyncpg, Postgres, Redis, bcrypt, PyJWT. The tests go through the
+HTTP door against a real Postgres; Redis is a fake one.
 
-## The stages
+## The choices
 
-| # | Stage | What changes | Laptop, s | × |
-|---|---|---|---:|---:|
-| 0 | Baseline | — | 182.7 | 1.0 |
-| 1 | bcrypt at its lowest cost | the suite hashes with 4 rounds, not 12 | 32.0 | 5.7 |
-| 2 | One application for the whole run | `create_app()` once, not once a test | 28.3 | 6.5 |
-| 3 | The database emptied in one round trip | one string of `DELETE`s to the driver, not a statement per table | 26.0 | 7.0 |
-| 4 | time-machine instead of freezegun | the `freezer` fixture is built on another library | 21.4 | 8.5 |
-| 5 | The clock stopped only where a test reads it | no mark, no frozen clock | 20.3 | 9.0 |
-| 6 | One event loop, one connection pool | the session shares a loop, so the engine keeps its connections | 13.7 | 13.3 |
-| 7 | A process per core | `pytest -n auto`, a database per worker | — | — |
+| Choice | Slow | Fast | Where |
+|---|---|---|---|
+| `hash` | bcrypt at production cost | bcrypt at its lowest cost (or `cached`: the fixtures' hash computed once) | `tests/harness/hashing.py` |
+| `app` | a new application for every test | one for the run | `tests/harness/application.py` |
+| `clean` | a `DELETE` per table through SQLAlchemy | one string of `DELETE`s to the driver (or `truncate`) | `tests/harness/cleaning.py` |
+| `clock` | freezegun | time-machine | `tests/harness/clock.py` |
+| `freeze` | the clock stopped for every test | only for the tests marked `freeze_time` | `tests/harness/clock.py` |
+| `loop` | an event loop per test, and so a connection pool per test | one of each for the session | `tests/harness/pool.py` |
+| `workers` | one process | one per core, a database each | `tests/harness/database.py` |
+| `schema` | every process builds its schema | every process copies a template database | `tests/harness/database.py` |
 
-The laptop column is one run of each stage, wall time of the whole `pytest` process, on a
-two-core Celeron N4020 with 3.6 GB of memory, which is too small to run stage 7. The numbers to
-trust are the ones GitHub measures: the [speedrun workflow](.github/workflows/speedrun.yml) runs
-every stage five times on one machine and puts the medians in the run's summary.
+Each module holds both ways side by side, with the reason in a comment.
 
-About two seconds of every number is the same at every stage — the interpreter starting, the
-imports, the database created and dropped — so the later stages are closer to their floor than
-the ratios say.
+## The numbers
+
+<!-- numbers -->
+The [speedrun workflow](.github/workflows/speedrun.yml) runs every harness as a job of its own,
+several times, and puts the medians in the run's summary.
+<!-- /numbers -->
+
+Three series, because the changes do not add up. From the slow harness nearly all the time is
+bcrypt, and everything else looks like nothing next to it; once the hashing is cheap, the same
+changes are worth a large part of what is left. So there is the usual walk — one change after
+another — and two more: the slow harness with one brake taken off, and the fast harness with one
+brake put back.
 
 ## Run it
 
 Postgres on `localhost` with user and password `postgres` (or your own in `.env`, see
-`.env.example`), and [uv](https://docs.astral.sh/uv/):
+`.env.example`), and [uv](https://docs.astral.sh/uv/). No Redis is needed.
 
     uv sync
-    uv run python speedrun.py            # every stage in order, with a table at the end
-    uv run python speedrun.py 0 6        # two of them
-    uv run python speedrun.py 3 -- -x -k login    # what follows `--` goes to pytest
-    uv run pytest                        # the finished harness, one process
-    uv run pytest -n auto                # the finished harness, a process per core
+    uv run pytest                                     # the fast harness, one process
+    uv run python speedrun.py slow                    # the slow one, timed
+    uv run python speedrun.py slow,hash=cheap fast    # any harnesses, one after another
+    uv run python speedrun.py --series minus-one      # a whole series
+    uv run python speedrun.py fast -- -x -k login     # what follows `--` goes to pytest
 
 The suite creates the database `speedrun_test` at the start and drops it at the end.
 
 ## Where to look
 
     app/                  the service
-    tests/test_*.py       the tests — the same at every stage
-    tests/fixtures.py     users, client, tokens — the same at every stage
-    tests/stages/         the eight harnesses
-    tests/conftest.py     picks one by the STAGE environment variable
-    speedrun.py           runs a stage and times it
+    tests/api/            the tests that go through the application to the database
+    tests/units/          the tests that touch neither
+    tests/fixtures.py     users, client, tokens — the same under every harness
+    tests/harness/        the choices
+    tests/conftest.py     puts a harness together by the HARNESS environment variable
+    speedrun.py           runs a harness and times it; holds the three series
 
-A stage is a whole file, so a step is a diff:
+## What each choice is
 
-    diff -u tests/stages/s0_baseline.py tests/stages/s1_cheap_hashing.py
+**`hash`.** A password hash is slow on purpose: a quarter of a second at the default cost. A test
+creates a user or two and signs in, so it pays that two or three times. Inside the suite
+`bcrypt.gensalt` defaults to four rounds. The hashes are as real — salted, and checked by the same
+`checkpw`, which reads the cost out of the hash — and the application's code is not touched.
+`cached` is the half-measure for those who would rather not touch the cost: the hash the fixtures
+store is computed once a run, and every sign-in still pays in full.
 
-## What each step is
+**`app`.** `create_app()` registers every route, and the first request FastAPI serves builds what
+it needs to validate them. The harness builds the application once; the lifespan still runs
+around every test. This grows with the number of routes.
 
-**1. bcrypt at its lowest cost.** A password hash is slow on purpose: a quarter of a second at
-the default cost. A test creates a user or two and signs in, so it pays that two or three times.
-Inside the suite `bcrypt.gensalt` defaults to four rounds. The hashes are as real — salted, and
-checked by the same `checkpw`, which reads the cost out of the hash. The application's code is
-not touched. This is most of the win, here and in every suite that signs users in.
+**`clean`.** Before each test every table is emptied. Through SQLAlchemy that is a statement and a
+round trip per table; asyncpg takes one string of all the statements and runs it in one. This
+grows with the number of tables. `TRUNCATE` is there because it is the first thing everybody
+suggests.
 
-**2. One application for the whole run.** `create_app()` registers every route, and the first
-request FastAPI serves builds what it needs to validate them. The harness builds the application
-once; the lifespan still runs around every test. With fifteen routes this is a small step. It
-grows with the application.
+**`clock`.** freezegun stops the clock by finding every loaded module that holds `datetime`, `date`
+or `time` and swapping the reference, at every start and every stop; the more is imported, the
+longer it takes. time-machine patches the C functions once. The tests are the same under both: the
+fixture gives them `freezer.tick()` and `freezer.move_to()`. There is a second difference:
+freezegun also stops `time.monotonic`, the event loop's own clock, so under it a timeout never
+fires and a test that should fail hangs instead.
 
-**3. The database emptied in one round trip.** Before each test every table is emptied. Through
-SQLAlchemy that is a statement and a round trip per table; asyncpg takes one string of all the
-statements and runs it in one. With five tables this is a small step too. It grows with the
-schema.
+**`freeze`.** A suite ends up with the clock stopped for every test when the mark is put on whole
+modules to be safe. Under `marked` only the tests that read the clock have it stopped.
 
-**4. time-machine instead of freezegun.** freezegun stops the clock by finding every loaded module
-that holds `datetime`, `date` or `time` and swapping the reference, at every start and every stop.
-time-machine patches the C functions once. The tests are the same under both: the fixture gives
-them `freezer.tick()` and `freezer.move_to()`. There is a second difference, which matters at
-stage 6: freezegun also stops `time.monotonic`, the event loop's own clock, so under it a
-timeout never fires and a test that should fail hangs instead; time-machine with `tick=False`
-leaves the monotonic clock running.
+**`loop`.** pytest-asyncio gives every test a new event loop by default, and an asyncpg connection
+belongs to the loop that opened it — so the pool is thrown away after every test and each test
+opens its own connections. With one loop for the session the pool lives as long as the run. Three
+things come with it: the application's shutdown must not dispose of the engine, a task a test
+forgot must be cancelled before the next test, and the clock library must leave the loop's clock
+alone.
 
-**5. The clock stopped only where a test reads it.** Up to here every test runs with the clock
-stopped, the way a suite ends up when the mark is put on whole modules to be safe. From here only
-the tests marked `freeze_time` do: 18 of the 232.
+**`workers`.** pytest-xdist, with a database per worker: the worker's id goes on the end of the
+database's name before the engine is built. It multiplies whatever the other choices left, and it
+is the one choice that costs memory.
 
-**6. One event loop, one connection pool.** pytest-asyncio gives every test a new event loop by
-default, and an asyncpg connection belongs to the loop that opened it — so the pool is thrown away
-after every test and each test opens its own connections. With one loop for the session the pool
-lives as long as the run. Three things come with it: the application's shutdown must not dispose
-of the engine, a task a test forgot must be cancelled before the next test, and the clock library
-must leave the loop's clock alone (step 4).
+**`schema`.** With a process per core every worker builds the schema for itself. A template
+database is built once, and `CREATE DATABASE … TEMPLATE` copies files. This grows with the size of
+the schema and the number of migrations.
 
-**7. A process per core.** pytest-xdist, with a database per worker: the worker's id goes on the
-end of the database's name before the engine is built. Last, because it multiplies whatever the
-other steps left — and because it is the one step that costs memory.
+## How to find where the time goes
 
-## What is not here
-
-Three more things sped up the suite these steps were first worked out on, and are left out
-because they change the application rather than the harness: a provider's SDK imported at the
-moment of the call and not at start-up, a migration check that read the migrations directory at
-every start-up, and a test that reached the real network.
-
-How the time was found matters as much as the list. What worked: timing every fixture's setup
-with a `pytest_fixture_setup` hook wrapper, and comparing the first request to a fresh
-application with the second. What did not: reading the cumulative times of coroutines out of
-cProfile.
+What worked: timing every fixture's setup with a `pytest_fixture_setup` hook wrapper, and
+comparing the first request to a fresh application with the second. What did not: `--durations`
+and the cumulative times of coroutines out of cProfile. One trap: under freezegun
+`time.perf_counter` is stopped too, so a fixture timed with it takes no time at all — measure
+with `time.clock_gettime(time.CLOCK_MONOTONIC)`.
