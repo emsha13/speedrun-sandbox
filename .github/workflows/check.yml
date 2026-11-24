@@ -10,7 +10,7 @@ on:
         default: fast
 
 concurrency:
-  group: check-${{ github.ref }}
+  group: check-${{ github.ref }}-${{ inputs.harness }}
   cancel-in-progress: true
 
 permissions:
