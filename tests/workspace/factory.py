@@ -89,11 +89,14 @@ def sample(model, column):
         return lowest(column) if column.info.get('field') else n
     if kind is Decimal:
         return Decimal('10.00')
-    if kind is date:
+    # By name: freezegun puts classes of its own in place of `date` and `datetime` in every module
+    # loaded, this one too, and the class the annotation names is the real one.
+    named = getattr(kind, '__name__', None) if getattr(kind, '__module__', None) == 'datetime' else None
+    if named == 'date':
         return a_date(key, n)
-    if kind is datetime:
+    if named == 'datetime':
         return a_moment(key, n)
-    if kind is time:
+    if named == 'time':
         return time(17) if key == 'closes' else time(9)
     raise TypeError(f'no sample for {model.__name__}.{key}')
 

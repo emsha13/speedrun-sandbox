@@ -1,7 +1,7 @@
 [project]
 name = "fastapi-pytest-speedrun"
 version = "0.1.0"
-description = "One FastAPI auth service, one test suite, eight test harnesses: how a slow pytest run gets fast, step by step."
+description = "One FastAPI service, one test suite, and a test harness of independent choices: how a slow pytest run gets fast, step by step."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

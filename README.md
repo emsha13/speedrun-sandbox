@@ -1,14 +1,24 @@
 # fastapi-pytest-speedrun
 
-One FastAPI service, one test suite of 1,300 tests, and a test harness put together from
+One FastAPI service, one test suite of 3,200 tests, and a test harness put together from
 independent choices — each with a slow value and a fast one. The tests never change. What changes
 is the harness under them, one choice at a time, and every combination is timed.
 
-The service is the part nearly every application has: registration with a mailed code, sign-in by
-address or by phone number, refresh tokens, password reset, change of password, of address and of
-number, a profile, a list of sessions, request limits, and the users as an admin sees them.
-FastAPI, SQLAlchemy 2 (async), asyncpg, Postgres, Redis, bcrypt, PyJWT. The tests go through the
-HTTP door against a real Postgres; Redis is a fake one.
+The service is a team workspace, built to the size at which the harness starts to matter: 201
+tables and 360 routes. Underneath is the part nearly every application has — registration with a
+mailed code, sign-in by address or by phone number, refresh tokens, password reset, changes of
+password, address and number, sessions, request limits, users as an admin sees them. On top of it
+are organisations with roles and invitations, projects and tasks, documents with versions, a
+calendar with rooms, a help desk with deadlines, a CRM, invoices and payments, chat and
+notifications, integrations, files, and reports. FastAPI, SQLAlchemy 2 (async), asyncpg, Postgres,
+Redis, bcrypt, PyJWT. The tests go through the HTTP door against a real Postgres; Redis is a fake
+one.
+
+Most of the workspace's routes are the routine five — list, read, create, update, delete — and
+come from one builder that reads the model (`app/workspace/crud.py`); the routes with rules of
+their own are written by hand. The tests follow the same split: `tests/workspace/test_doors.py`
+runs one set of tests over every table the builder made doors for, and a file a section tests
+what that section does.
 
 ## The choices
 
@@ -94,7 +104,6 @@ Postgres on `localhost` with user and password `postgres` (or your own in `.env`
     uv run pytest                                     # the fast harness, one process
     uv run python speedrun.py slow                    # the slow one, timed
     uv run python speedrun.py slow,hash=cheap fast    # any harnesses, one after another
-    uv run python speedrun.py --series minus-one      # a whole series
     uv run python speedrun.py fast -- -x -k login     # what follows `--` goes to pytest
 
 The suite creates the database `speedrun_test` at the start and drops it at the end.
@@ -102,7 +111,9 @@ The suite creates the database `speedrun_test` at the start and drops it at the 
 ## Where to look
 
     app/                  the service
-    tests/api/            the tests that go through the application to the database
+    app/workspace/        the workspace: models, the builder of routine doors, the sections
+    tests/api/            the tests of accounts and sign-in, through the application to the database
+    tests/workspace/      the tests of the workspace, the same way
     tests/units/          the tests that touch neither
     tests/fixtures.py     users, client, tokens — the same under every harness
     tests/harness/        the choices
