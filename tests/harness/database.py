@@ -74,6 +74,11 @@ async def create_database() -> None:
         await server.execute(f'CREATE DATABASE "{name}" TEMPLATE "{TEMPLATE}"')
     else:
         await server.execute(f'CREATE DATABASE "{name}"')
+    if options.commit == 'async':
+        # A commit that waits for the disk is what keeps a bank's money through a power cut. This
+        # database is dropped at the end of the run, so its commits return at once: the setting
+        # is the database's own and touches nothing else on the server.
+        await server.execute(f'ALTER DATABASE "{name}" SET synchronous_commit = off')
     await server.close()
     if options.schema == 'create':
         await _build_schema()

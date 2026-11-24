@@ -19,6 +19,7 @@ HTTP door against a real Postgres; Redis is a fake one.
 | `clean` | a `DELETE` per table through SQLAlchemy | one string of `DELETE`s to the driver (or `truncate`) | `tests/harness/cleaning.py` |
 | `clock` | freezegun | time-machine | `tests/harness/clock.py` |
 | `freeze` | the clock stopped for every test | only for the tests marked `freeze_time` | `tests/harness/clock.py` |
+| `commit` | a commit waits for the disk | it returns at once | `tests/harness/database.py` |
 | `loop` | an event loop per test, and so a connection pool per test | one of each for the session | `tests/harness/pool.py` |
 | `workers` | one process | one per core, a database each | `tests/harness/database.py` |
 | `schema` | every process builds its schema | every process copies a template database | `tests/harness/database.py` |

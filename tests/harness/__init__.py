@@ -17,6 +17,8 @@ CHOICES = {
     # How the database is emptied before a test: a statement per table through SQLAlchemy, one
     # string of DELETEs to the driver, or one TRUNCATE.
     'clean': ('per_table', 'one_string', 'truncate'),
+    # Whether a commit waits for the disk, as production's must, or returns at once.
+    'commit': ('sync', 'async'),
     # The library that stops the clock.
     'clock': ('freezegun', 'time_machine'),
     # Whose clock is stopped: every test's, or only that of the tests marked `freeze_time`.
@@ -31,8 +33,8 @@ CHOICES = {
 
 SLOW = {name: values[0] for name, values in CHOICES.items()}
 FAST = SLOW | {
-    'hash': 'cheap', 'app': 'shared', 'clean': 'one_string', 'clock': 'time_machine', 'freeze': 'marked',
-    'loop': 'session',
+    'hash': 'cheap', 'app': 'shared', 'clean': 'one_string', 'commit': 'async', 'clock': 'time_machine',
+    'freeze': 'marked', 'loop': 'session',
 }
 
 

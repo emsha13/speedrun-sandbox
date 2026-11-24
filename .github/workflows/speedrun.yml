@@ -1,20 +1,17 @@
-# Every harness of every series, timed: the same tests each time, a different harness under them.
-# A harness is a job of its own, on a machine of its own, and runs several times there; the table
-# in the run's summary is the median of each harness's runs.
+# The three series, timed: the same tests each time, a different harness under them. A job is one
+# comparison — two harnesses run in turns on one machine — because the same harness on two of
+# GitHub's machines differs by more than most of the changes are worth. The tables in the run's
+# summary are made of those comparisons.
 name: speedrun
 
 on:
   workflow_dispatch:
-    inputs:
-      runs:
-        description: How many times to run every harness
-        default: '3'
 
 permissions:
   contents: read
 
 jobs:
-  harnesses:
+  comparisons:
     runs-on: ubuntu-24.04
     outputs:
       list: ${{ steps.list.outputs.list }}
@@ -27,14 +24,14 @@ jobs:
         run: echo "list=$(python speedrun.py --matrix)" >> "$GITHUB_OUTPUT"
 
   measure:
-    needs: harnesses
-    name: ${{ matrix.harness }}
+    needs: comparisons
+    name: ${{ matrix.pair.b }} / ${{ matrix.pair.a }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        harness: ${{ fromJSON(needs.harnesses.outputs.list) }}
+        pair: ${{ fromJSON(needs.comparisons.outputs.list) }}
     services:
       postgres:
         image: postgres:18
@@ -56,10 +53,12 @@ jobs:
         run: |
           pip install uv
           uv sync --frozen
-      - name: Tests, timed
+      - name: The two harnesses, in turns
+        env:
+          SPEEDRUN_MACHINE: ${{ strategy.job-index }}
         run: |
           mkdir -p results
-          uv run python speedrun.py "${{ matrix.harness }}" --runs "${{ inputs.runs }}" --json "results/${{ strategy.job-index }}.jsonl"
+          uv run python speedrun.py "${{ matrix.pair.a }}" "${{ matrix.pair.b }}" --rounds "${{ matrix.pair.rounds }}" --json "results/${{ strategy.job-index }}.jsonl"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
