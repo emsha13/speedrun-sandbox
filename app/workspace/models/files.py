@@ -33,8 +33,9 @@ class File(Owned, Base):
     folder_id: Mapped[int | None] = loose('folders')
     name: Mapped[str] = col(String(200))
     content_type: Mapped[str] = col(String(100), default='application/octet-stream')
-    size: Mapped[int] = col(BigInteger, ge=0, le=A_TERABYTE)
-    checksum: Mapped[str] = col(String(64), pattern=r'^[0-9a-f]{64}$')
+    # The contents are given when the file is made, and replaced by a door of their own.
+    size: Mapped[int] = col(BigInteger, fixed=True, ge=0, le=A_TERABYTE)
+    checksum: Mapped[str] = col(String(64), fixed=True, pattern=r'^[0-9a-f]{64}$')
     storage_key: Mapped[str] = col(String(64), unique=True, managed=True, hidden=True)
     uploaded_by_id: Mapped[int | None] = loose('users', managed=True)
     # Counts the contents, not the row: renaming a file leaves it as it is.
