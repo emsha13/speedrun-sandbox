@@ -70,7 +70,8 @@ async def test_a_ticket_is_promised_by_its_priority(client, as_, at, queue, poli
 @pytest.mark.freeze_time('2026-03-02 09:00:00')
 async def test_a_new_priority_makes_a_new_promise_from_the_start(client, as_, at, queue, policies, freezer):
     ticket = await opened(client, as_, at, queue)
-    freezer.tick(timedelta(minutes=30))
+    # Less than an access token lives.
+    freezer.tick(timedelta(minutes=10))
     response = await client.patch(at(f'/tickets/{ticket["id"]}'), json={'priority': 'urgent'},
                                   headers=await as_('member'))
 
@@ -127,7 +128,7 @@ async def test_the_first_answer(client, as_, at, ticket):
 async def test_the_first_answer_is_counted_once(client, as_, at, ticket, freezer):
     await said(client, as_, at, ticket)
     first = (await read(client, as_, at, ticket))['first_response_at']
-    freezer.tick(timedelta(hours=1))
+    freezer.tick(timedelta(minutes=10))
     await said(client, as_, at, ticket)
 
     assert (await read(client, as_, at, ticket))['first_response_at'] == first
