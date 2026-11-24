@@ -13,12 +13,13 @@ import re
 import types
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Annotated, Any, Literal, Optional, get_args, get_type_hints
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from pydantic import ConfigDict, Field, create_model
+from pydantic import AwareDatetime, ConfigDict, Field, create_model
 from sqlalchemy import JSON, Text, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
@@ -82,6 +83,9 @@ def accepted(column, kind):
             limits['min_length'] = 1
     elif kind is int:
         limits |= {'ge': 1 if column.foreign_keys else -INT4, 'le': INT4}
+    elif kind is datetime:
+        # A moment without its zone would be taken for one in the server's; it is refused instead.
+        kind = AwareDatetime
     elif kind is Decimal:
         limits |= {'max_digits': column.type.precision, 'decimal_places': column.type.scale}
     limits |= column.info.get('field', {})
