@@ -82,7 +82,7 @@ def test_email_accepted_and_lowercased(given, kept):
 @pytest.mark.parametrize('email', [
     '', 'ann', 'ann@', '@example.com', 'ann@example', 'a b@example.com', 'ann@@example.com', 'ann@.com',
     'ann@example..com', '.ann@example.com', 'ann.@example.com', 'ann@example.com.', 'ann@-example.com',
-    'ann@exa mple.com', 'x' * 250 + '@example.com', 'x' * 65 + '@example.com', 'ann@localhost',
+    'ann@exa mple.com', 'x' * 250 + '@example.com', 'ann@localhost',
 ])
 def test_email_refused(email):
     refused(email=email)

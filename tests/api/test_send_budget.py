@@ -43,7 +43,7 @@ def elsewhere(sender):
 
 @every_sender
 async def test_three_codes_are_sent(send, to):
-    assert all((await send(to)).status_code != 429 for _ in range(3))
+    assert 429 not in [(await send(to)).status_code for _ in range(3)]
 
 
 @every_sender
@@ -99,7 +99,7 @@ async def test_budget_is_per_destination(send, to, elsewhere):
 async def test_codes_are_sent_without_redis(send, to, fake_redis, mocker):
     mocker.patch.object(fake_redis, 'incr', side_effect=ConnectionError('gone'))
 
-    assert all((await send(to)).status_code != 429 for _ in range(5))
+    assert 429 not in [(await send(to)).status_code for _ in range(5)]
 
 
 async def test_budget_is_shared_by_the_doors(client, inactive_user):
