@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings",
     "pyjwt",
     "bcrypt",
+    "redis",
 ]
 
 [dependency-groups]
@@ -23,6 +24,7 @@ dev = [
     "pytest-xdist",
     "httpx",
     "asgi-lifespan",
+    "fakeredis",
     "freezegun",
     "time-machine",
 ]

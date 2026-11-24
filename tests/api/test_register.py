@@ -19,8 +19,8 @@ async def test_register(client, registration, email, mocker):
 
     assert response.status_code == 201
     assert response.json() == {
-        'id': mocker.ANY, 'email': email, 'first_name': 'Ann', 'last_name': 'Lee', 'birth_date': None,
-        'is_active': False, 'created_at': mocker.ANY,
+        'id': mocker.ANY, 'email': email, 'phone': None, 'first_name': 'Ann', 'last_name': 'Lee',
+        'birth_date': None, 'role': 'user', 'is_active': False, 'created_at': mocker.ANY,
     }
 
 

@@ -55,21 +55,21 @@ async def test_login_wrong_password(client, user):
     response = await client.post('/auth/login', json={'email': user.email, 'password': WRONG})
 
     assert response.status_code == 401
-    assert response.json() == {'detail': 'wrong email or password'}
+    assert response.json() == {'detail': 'wrong login or password'}
 
 
 async def test_login_unknown_address_answers_the_same(client, email):
     response = await client.post('/auth/login', json={'email': email, 'password': WRONG})
 
     assert response.status_code == 401
-    assert response.json() == {'detail': 'wrong email or password'}
+    assert response.json() == {'detail': 'wrong login or password'}
 
 
 async def test_login_unverified(client, inactive_user, password):
     response = await client.post('/auth/login', json={'email': inactive_user.email, 'password': password})
 
     assert response.status_code == 403
-    assert response.json() == {'detail': 'email is not verified'}
+    assert response.json() == {'detail': 'account is not active'}
 
 
 async def test_login_unverified_wrong_password(client, inactive_user):

@@ -8,8 +8,8 @@ async def test_read_profile(client, user, auth):
 
     assert response.status_code == 200
     assert response.json() == {
-        'id': user.id, 'email': user.email, 'first_name': 'Ann', 'last_name': 'Lee', 'birth_date': None,
-        'is_active': True, 'created_at': user.created_at.isoformat().replace('+00:00', 'Z'),
+        'id': user.id, 'email': user.email, 'phone': None, 'first_name': 'Ann', 'last_name': 'Lee',
+        'birth_date': None, 'role': 'user', 'is_active': True, 'created_at': user.created_at.isoformat().replace('+00:00', 'Z'),
     }
 
 

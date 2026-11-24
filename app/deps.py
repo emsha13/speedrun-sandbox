@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import security
 from app.db import get_session
-from app.models import RefreshSession, User
+from app.models import RefreshSession, Role, User
 
 Db = Annotated[AsyncSession, Depends(get_session)]
 bearer = HTTPBearer(auto_error=False)
@@ -35,3 +35,12 @@ async def signed_in(session: Db, credentials: Annotated[HTTPAuthorizationCredent
 
 
 Me = Annotated[Signed, Depends(signed_in)]
+
+
+async def admin(me: Me) -> Signed:
+    if me.user.role != Role.ADMIN:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, 'admins only')
+    return me
+
+
+Admin = Annotated[Signed, Depends(admin)]

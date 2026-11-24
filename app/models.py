@@ -16,6 +16,12 @@ class CodePurpose(enum.StrEnum):
     VERIFY_EMAIL = 'verify_email'
     RESET_PASSWORD = 'reset_password'
     CHANGE_EMAIL = 'change_email'
+    CHANGE_PHONE = 'change_phone'
+
+
+class Role(enum.StrEnum):
+    USER = 'user'
+    ADMIN = 'admin'
 
 
 class User(Base):
@@ -23,7 +29,9 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
+    phone: Mapped[str | None] = mapped_column(String(16), unique=True)
     password_hash: Mapped[str] = mapped_column(String(60))
+    role: Mapped[str] = mapped_column(String(10), default=Role.USER)
     first_name: Mapped[str] = mapped_column(String(50))
     last_name: Mapped[str] = mapped_column(String(50))
     birth_date: Mapped[date | None]
@@ -51,7 +59,7 @@ class OneTimeCode(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), index=True)
     purpose: Mapped[str] = mapped_column(String(20))
     code_digest: Mapped[str] = mapped_column(String(64))
-    # What the code confirms, when that is not the user's own address: the new one.
+    # What the code confirms, when that is not the user's own address: the new address or number.
     target: Mapped[str | None] = mapped_column(String(254))
     attempts: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
@@ -59,11 +67,11 @@ class OneTimeCode(Base):
 
 
 class LoginAttempt(Base):
-    """A failed sign-in. Enough of them in a row lock the address for a while."""
+    """A failed sign-in. Enough of them in a row lock the address or the number for a while."""
     __tablename__ = 'login_attempts'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(254), index=True)
+    login: Mapped[str] = mapped_column(String(254), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

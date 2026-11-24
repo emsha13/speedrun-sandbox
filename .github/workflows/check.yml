@@ -1,0 +1,45 @@
+# The suite once, under the fast harness: does it pass.
+name: check
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      harness:
+        description: The harness to run under
+        default: fast
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - name: Install what uv.lock names
+        run: |
+          pip install uv
+          uv sync --frozen
+      - name: Tests
+        run: uv run python speedrun.py "${{ inputs.harness || 'fast' }}" -- --maxfail=25

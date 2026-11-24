@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
-from app import security, services
+from app import limits, security, services
 from app.deps import Db, Me
 from app.models import CodePurpose, RefreshSession, now
-from app.schemas import CodeOnly, EmailChange, PasswordChange, PasswordOnly, ProfileUpdate, SessionOut, UserOut
+from app.schemas import (
+    CodeOnly, EmailChange, PasswordChange, PasswordOnly, PhoneChange, ProfileUpdate, SessionOut, UserOut,
+)
 
 router = APIRouter(prefix='/me', tags=['account'])
 WRONG_PASSWORD = HTTPException(status.HTTP_400_BAD_REQUEST, 'wrong password')
@@ -50,7 +52,8 @@ async def change_email(data: EmailChange, me: Me, session: Db):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'new email is the old one')
     if await services.user_by_email(session, data.new_email):
         raise HTTPException(status.HTTP_409_CONFLICT, 'email is taken')
-    await services.send_code(session, me.user, CodePurpose.CHANGE_EMAIL, target=data.new_email)
+    await limits.spend_send(data.new_email)
+    await services.send_code(session, me.user, CodePurpose.CHANGE_EMAIL, data.new_email)
 
 
 @router.post('/change-email/confirm', response_model=UserOut)
@@ -62,6 +65,43 @@ async def confirm_email_change(data: CodeOnly, me: Me, session: Db):
         raise HTTPException(status.HTTP_409_CONFLICT, 'email is taken')
     me.user.email = row.target
     services.record(session, me.user, 'email_changed')
+    await session.commit()
+    return me.user
+
+
+@router.post('/change-phone', status_code=status.HTTP_204_NO_CONTENT)
+async def change_phone(data: PhoneChange, me: Me, session: Db):
+    """The first number is set the same way a number is changed: by a code sent to it."""
+    if not security.verify_password(data.password, me.user.password_hash):
+        raise WRONG_PASSWORD
+    if data.new_phone == me.user.phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'new phone is the old one')
+    if await services.user_by_phone(session, data.new_phone):
+        raise HTTPException(status.HTTP_409_CONFLICT, 'phone is taken')
+    await limits.spend_send(data.new_phone)
+    await services.send_code(session, me.user, CodePurpose.CHANGE_PHONE, data.new_phone)
+
+
+@router.post('/change-phone/confirm', response_model=UserOut)
+async def confirm_phone_change(data: CodeOnly, me: Me, session: Db):
+    row = await services.use_code(session, me.user, CodePurpose.CHANGE_PHONE, data.code)
+    if await services.user_by_phone(session, row.target):
+        await session.commit()
+        raise HTTPException(status.HTTP_409_CONFLICT, 'phone is taken')
+    me.user.phone = row.target
+    services.record(session, me.user, 'phone_changed')
+    await session.commit()
+    return me.user
+
+
+@router.post('/remove-phone', response_model=UserOut)
+async def remove_phone(data: PasswordOnly, me: Me, session: Db):
+    if not security.verify_password(data.password, me.user.password_hash):
+        raise WRONG_PASSWORD
+    if me.user.phone is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'there is no phone to remove')
+    me.user.phone = None
+    services.record(session, me.user, 'phone_removed')
     await session.commit()
     return me.user
 

@@ -1,31 +1,40 @@
-# Every stage of the harness, timed on one GitHub machine: the same tests each time, a different
-# module of `tests/stages/` under them. The stages run in rounds — 0 to 7, then 0 to 7 again — so
-# that a machine that slows down halfway slows every stage alike, and the table in the run's
-# summary is the median of each stage's runs.
+# Every harness of every series, timed: the same tests each time, a different harness under them.
+# A harness is a job of its own, on a machine of its own, and runs several times there; the table
+# in the run's summary is the median of each harness's runs.
 name: speedrun
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
-      rounds:
-        description: How many times to run every stage
-        default: '5'
-
-concurrency:
-  group: speedrun-${{ github.ref }}
-  cancel-in-progress: true
+      runs:
+        description: How many times to run every harness
+        default: '3'
 
 permissions:
   contents: read
 
 jobs:
-  speedrun:
+  harnesses:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - id: list
+        run: echo "list=$(python speedrun.py --matrix)" >> "$GITHUB_OUTPUT"
 
+  measure:
+    needs: harnesses
+    name: ${{ matrix.harness }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: ${{ fromJSON(needs.harnesses.outputs.list) }}
     services:
       postgres:
         image: postgres:18
@@ -38,35 +47,37 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
-
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
-
       - name: Install what uv.lock names
         run: |
           pip install uv
           uv sync --frozen
-
-      - name: Every stage, in rounds
-        env:
-          ROUNDS: ${{ inputs.rounds || '5' }}
+      - name: Tests, timed
         run: |
           mkdir -p results
-          for round in $(seq "$ROUNDS"); do
-            echo "::group::round $round"
-            uv run python speedrun.py --json results/times.jsonl
-            echo "::endgroup::"
-          done
-
-      - name: The table
+          uv run python speedrun.py "${{ matrix.harness }}" --runs "${{ inputs.runs }}" --json "results/${{ strategy.job-index }}.jsonl"
+      - uses: actions/upload-artifact@v7
         if: always()
-        run: |
-          {
-            echo "## $(nproc) cores, $(python --version), $(grep -c . results/times.jsonl) runs"
-            echo
-            uv run python scripts/summarize.py results/times.jsonl
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+        with:
+          name: times-${{ strategy.job-index }}
+          path: results/
+
+  table:
+    needs: measure
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@v8
+        with:
+          path: results
+          merge-multiple: true
+      - name: The tables
+        run: python scripts/summarize.py results/*.jsonl | tee -a "$GITHUB_STEP_SUMMARY"
