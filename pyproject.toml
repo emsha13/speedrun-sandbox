@@ -1,0 +1,39 @@
+[project]
+name = "fastapi-pytest-speedrun"
+version = "0.1.0"
+description = "One FastAPI auth service, one test suite, eight test harnesses: how a slow pytest run gets fast, step by step."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "pydantic[email]",
+    "pydantic-settings",
+    "pyjwt",
+    "bcrypt",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "pytest-xdist",
+    "httpx",
+    "asgi-lifespan",
+    "freezegun",
+    "time-machine",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# The finished harness (stage 7) runs every test on one event loop. `speedrun.py` overrides both
+# for the stages that still give each test a loop of its own.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]

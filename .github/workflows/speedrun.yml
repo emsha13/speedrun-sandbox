@@ -1,0 +1,72 @@
+# Every stage of the harness, timed on one GitHub machine: the same tests each time, a different
+# module of `tests/stages/` under them. The stages run in rounds — 0 to 7, then 0 to 7 again — so
+# that a machine that slows down halfway slows every stage alike, and the table in the run's
+# summary is the median of each stage's runs.
+name: speedrun
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: How many times to run every stage
+        default: '5'
+
+concurrency:
+  group: speedrun-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  speedrun:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install what uv.lock names
+        run: |
+          pip install uv
+          uv sync --frozen
+
+      - name: Every stage, in rounds
+        env:
+          ROUNDS: ${{ inputs.rounds || '5' }}
+        run: |
+          mkdir -p results
+          for round in $(seq "$ROUNDS"); do
+            echo "::group::round $round"
+            uv run python speedrun.py --json results/times.jsonl
+            echo "::endgroup::"
+          done
+
+      - name: The table
+        if: always()
+        run: |
+          {
+            echo "## $(nproc) cores, $(python --version), $(grep -c . results/times.jsonl) runs"
+            echo
+            uv run python scripts/summarize.py results/times.jsonl
+          } | tee -a "$GITHUB_STEP_SUMMARY"
