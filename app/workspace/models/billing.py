@@ -58,10 +58,10 @@ class Invoice(Owned, Base):
     status: Mapped[InvoiceStatus] = col(String(10), default=InvoiceStatus.DRAFT, managed=True)
     issued_on: Mapped[date | None] = col(managed=True)
     # Kept in step with the lines and the payments by whatever changes those.
-    subtotal: Mapped[Decimal] = money(default=Decimal(0), managed=True)
-    tax: Mapped[Decimal] = money(default=Decimal(0), managed=True)
-    total: Mapped[Decimal] = money(default=Decimal(0), managed=True)
-    paid: Mapped[Decimal] = money(default=Decimal(0), managed=True)
+    subtotal: Mapped[Decimal] = money(default=Decimal('0.00'), managed=True)
+    tax: Mapped[Decimal] = money(default=Decimal('0.00'), managed=True)
+    total: Mapped[Decimal] = money(default=Decimal('0.00'), managed=True)
+    paid: Mapped[Decimal] = money(default=Decimal('0.00'), managed=True)
 
 
 class InvoiceLine(Owned, Base):

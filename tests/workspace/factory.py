@@ -7,6 +7,8 @@ leave the rest to the table's defaults.
 import enum
 import itertools
 
+from collections import defaultdict
+
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import get_origin
@@ -18,6 +20,7 @@ from app.workspace import base
 from app.workspace.crud import bare, kinds_of
 
 _numbers = itertools.count(1)
+_turns = defaultdict(itertools.count)
 A_MONDAY = date(2026, 1, 5)
 
 PATTERNS = {
@@ -73,8 +76,9 @@ def sample(model, column):
     if isinstance(column.type, JSON):
         return [] if get_origin(kind) is list else {}
     if isinstance(kind, type) and issubclass(kind, enum.Enum):
+        # Each in turn: a choice is often part of what makes a row unique.
         members = list(kind)
-        return members[n % len(members)]
+        return members[next(_turns[kind]) % len(members)]
     if kind is str:
         return f'{key.replace("_", " ")} {n}'[:getattr(column.type, 'length', None) or 200]
     if kind is bool:
@@ -98,7 +102,7 @@ def needed(column) -> bool:
     return not (column.nullable or column.default is not None or column.primary_key or column.key == 'created_at')
 
 
-async def make(session, model, org_id: int, user_id: int, **given):
+async def make(session, model, org_id: int, user_id: int, /, **given):
     """A row of the table in the organisation, in the database. Every user it names is
     `user_id`, and every row above it it needs is made too."""
     values = {'organisation_id': org_id} if 'organisation_id' in model.__table__.columns else {}

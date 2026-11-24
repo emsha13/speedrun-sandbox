@@ -37,7 +37,7 @@ async def add_up(context: Context, invoice: Invoice) -> None:
         select(InvoiceLine.quantity, InvoiceLine.unit_price, func.coalesce(TaxRate.percent, 0))
         .outerjoin(TaxRate, TaxRate.id == InvoiceLine.tax_rate_id).where(InvoiceLine.invoice_id == invoice.id)
     )
-    subtotal = tax = Decimal(0)
+    subtotal = tax = Decimal('0.00')
     for quantity, unit_price, percent in lines:
         subtotal += quantity * unit_price
         tax += (quantity * unit_price * percent / 100).quantize(CENT)

@@ -3,9 +3,10 @@ import pytest
 
 from app import services
 from app.models import User
-from app.workspace.models.orgs import MemberRole, Membership, Organisation, OrgSettings
+from app.workspace.models.orgs import MemberRole, Membership, Organisation, OrgSettings, Plan
 from tests.harness.hashing import hash_for_a_fixture
 from tests.utils import bearer
+from tests.workspace.factory import make
 
 # Who is in the organisation, and as what. `peer` is a second plain member: somebody whose rows
 # are not one's own and who is no admin either.
@@ -40,7 +41,8 @@ async def people(db_session, password):
 
 
 async def founded(session, name: str, slug: str, members: dict) -> Organisation:
-    organisation = Organisation(name=name, slug=slug)
+    # On the plan with seats to spare: the free one is full with the five people here.
+    organisation = Organisation(name=name, slug=slug, plan=Plan.TEAM)
     session.add(organisation)
     await session.flush()
     session.add(OrgSettings(organisation_id=organisation.id))
@@ -79,3 +81,12 @@ def as_(db_session, people):
 def at(org):
     """`at('/tasks')`: the path inside the organisation."""
     return lambda path: f'/orgs/{org.id}{path}'
+
+
+@pytest.fixture
+def new(db_session, org, people):
+    """`await new(Task, title='…')`: a row in the organisation, straight in the database, with
+    whatever it needs made too. Every user it names is `by`."""
+    async def _new(model, by='member', organisation=None, **given):
+        return await make(db_session, model, (organisation or org).id, people[by].id, **given)
+    return _new

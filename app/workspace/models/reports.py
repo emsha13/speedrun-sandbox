@@ -101,7 +101,7 @@ class KeyResult(Owned, Base):
     title: Mapped[str] = col(String(200))
     unit: Mapped[str | None] = col(String(20))
     target: Mapped[Decimal] = col(Numeric(12, 2))
-    reached: Mapped[Decimal] = col(Numeric(12, 2), default=Decimal(0))
+    reached: Mapped[Decimal] = col(Numeric(12, 2), default=Decimal('0.00'))
 
 
 class Metric(Owned, Base):

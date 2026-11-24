@@ -113,7 +113,7 @@ class Deal(Owned, Base):
     stage_id: Mapped[int] = ref('stages', fixed=True)
     company_id: Mapped[int | None] = loose('companies')
     contact_id: Mapped[int | None] = loose('contacts')
-    amount: Mapped[Decimal] = money(default=Decimal(0), ge=0)
+    amount: Mapped[Decimal] = money(default=Decimal('0.00'), ge=0)
     currency: Mapped[str] = col(String(3), default='EUR', pattern=CURRENCY)
     owner_id: Mapped[int | None] = loose('users')
     expected_on: Mapped[date | None]
