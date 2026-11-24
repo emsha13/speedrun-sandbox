@@ -12,6 +12,7 @@ import inspect
 import re
 import types
 
+from dataclasses import dataclass
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Annotated, Any, Literal, Optional, get_args, get_type_hints
@@ -34,6 +35,24 @@ INT4 = 2 ** 31 - 1
 LONGEST_TEXT = 50_000
 MANAGED = {'id', 'organisation_id', 'created_at'}
 RowId = Annotated[int, Path(ge=1, le=INT4)]
+
+
+@dataclass
+class Made:
+    """What `resource` made for a table: kept so that a suite can walk over every one."""
+    model: type
+    path: str
+    methods: list[str]
+    read: MemberRole
+    write: MemberRole
+    search: tuple[str, ...]
+    author: str | None
+    own: bool
+    audited: bool
+    create: type
+
+
+MADE: list[Made] = []
 
 
 def label_of(model) -> str:
@@ -172,9 +191,9 @@ async def find(context: Context, model, row_id: int):
     return row
 
 
-async def page(context: Context, model, shape, query, search: tuple[str, ...] = (), *where):
+async def page(context: Context, model, shape, query, search: tuple[str, ...]):
     """The rows of the organisation the query asks for, and how many there are in all."""
-    found = select(model).where(model.organisation_id == context.org_id, *where)
+    found = select(model).where(model.organisation_id == context.org_id)
     for name, value in vars(query).items():
         if value is not None and name not in ('search', 'sort', 'order', 'limit', 'offset'):
             found = found.where(getattr(model, name) == value)
@@ -192,7 +211,7 @@ async def page(context: Context, model, shape, query, search: tuple[str, ...] = 
 def resource(
     router: APIRouter, model, *, methods: str = EVERYTHING, read: MemberRole = MemberRole.GUEST,
     write: MemberRole = MemberRole.MEMBER, search: tuple[str, ...] = (), author: str | None = None,
-    own: bool = False, private: bool = False, check=None, gone=None, audited: bool = False,
+    own: bool = False, check=None, gone=None, audited: bool = False,
 ):
     """The doors of one table.
 
@@ -201,7 +220,6 @@ def resource(
     search     the columns `?search=` looks in
     author     the column that gets the id of whoever made the row
     own        only the author or an admin changes or deletes a row
-    private    and nobody but the author sees it at all
     check      `async (context, row, old)` before a row is saved; `old` is None for a new row,
                and for a changed one what the changed columns held before
     gone       `async (context, row)` after a row is deleted and before that is committed
@@ -214,12 +232,7 @@ def resource(
     Reader = Annotated[Context, Depends(at_least(read))]
     Writer = Annotated[Context, Depends(at_least(write))]
     methods = methods.split()
-
-    async def the_row(context: Context, row_id: int):
-        row = await find(context, model, row_id)
-        if private and getattr(row, author) != context.user.id:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, f'no such {label}')
-        return row
+    MADE.append(Made(model, path, methods, read, write, search, author, own, audited, Create))
 
     def may_change(context: Context, row) -> None:
         if own and getattr(row, author) != context.user.id and not context.is_at_least(MemberRole.ADMIN):
@@ -253,8 +266,7 @@ def resource(
     if 'list' in methods:
         @router.get(path, response_model=Page, name=f'list_{name}')
         async def list_rows(query: Annotated[SimpleNamespace, Depends(ListQuery)], context: Reader):
-            mine = [getattr(model, author) == context.user.id] if private else []
-            return await page(context, model, Page, query, search, *mine)
+            return await page(context, model, Page, query, search)
 
     if 'create' in methods:
         @router.post(path, response_model=Out, status_code=status.HTTP_201_CREATED, name=f'create_{name}')
@@ -270,12 +282,12 @@ def resource(
     if 'read' in methods:
         @router.get(f'{path}/{{row_id}}', response_model=Out, name=f'read_{name}')
         async def read_row(row_id: RowId, context: Reader):
-            return await the_row(context, row_id)
+            return await find(context, model, row_id)
 
     if 'update' in methods:
         @router.patch(f'{path}/{{row_id}}', response_model=Out, name=f'update_{name}')
         async def update_row(row_id: RowId, data: Update, context: Writer):
-            row = await the_row(context, row_id)
+            row = await find(context, model, row_id)
             may_change(context, row)
             changes = data.model_dump(exclude_unset=True)
             await check_references(context, model, changes)
@@ -290,7 +302,7 @@ def resource(
     if 'delete' in methods:
         @router.delete(f'{path}/{{row_id}}', status_code=status.HTTP_204_NO_CONTENT, name=f'delete_{name}')
         async def delete_row(row_id: RowId, context: Writer):
-            row = await the_row(context, row_id)
+            row = await find(context, model, row_id)
             may_change(context, row)
             await settle(context, row, 'delete')
 
