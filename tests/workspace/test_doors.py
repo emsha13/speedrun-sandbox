@@ -50,6 +50,11 @@ def update_of(made):
     return None
 
 
+# Worked out at import: inside a test freezegun may have put a class of its own in place of
+# `datetime`, and the annotation still names the real one.
+UPDATES = {made.path: update_of(made) for made in MADE}
+
+
 def required(made) -> list[str]:
     return [name for name, field in made.create.model_fields.items() if field.is_required()]
 
@@ -284,10 +289,10 @@ async def test_another_organisations_row_is_not_there(client, as_, at, org, othe
         assert response.status_code == 404, method
 
 
-@tables('update', where=update_of)
+@tables('update', where=lambda made: UPDATES[made.path])
 async def test_update(client, as_, at, org, made, row_in, db_session):
     row = await row_in(org, made)
-    name, value = update_of(made)
+    name, value = UPDATES[made.path]
     response = await client.patch(
         at(f'{made.path}/{row.id}'), json={name: value}, headers=await as_(writer(made)),
     )

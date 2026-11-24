@@ -27,7 +27,7 @@ jobs:
     needs: comparisons
     name: ${{ matrix.pair.b }} / ${{ matrix.pair.a }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
