@@ -1,10 +1,12 @@
 """An empty database before every test that uses one."""
 import pytest
 
+from app import models                                                                          # noqa: F401
 from app.db import Base, async_session
+from app.workspace import models as workspace                                                   # noqa: F401
 from tests.harness import options
 
-# Children before parents.
+# Children before parents — every table there is, the workspace's too.
 TABLES = [table.name for table in reversed(Base.metadata.sorted_tables)]
 
 

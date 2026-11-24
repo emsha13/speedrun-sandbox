@@ -33,6 +33,7 @@ TEMPLATE = make_url(settings.DB_URL_TEST).database + '_template'
 
 async def _build_schema() -> None:
     from app import models                                                                      # noqa: F401
+    from app.workspace import models as workspace                                               # noqa: F401
     from app.db import Base, engine
 
     async with engine.begin() as connection:
@@ -48,6 +49,7 @@ async def create_template() -> None:
     from sqlalchemy.ext.asyncio import create_async_engine
 
     from app import models                                                                      # noqa: F401
+    from app.workspace import models as workspace                                               # noqa: F401
     from app.db import Base
 
     server = await asyncpg.connect(_server())
