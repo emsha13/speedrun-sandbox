@@ -6,15 +6,14 @@ from app.db import Base, async_session
 from app.settings import settings
 from tests.harness import options
 
-# An experiment, to be taken out: the accounts' own tables, before the workspace adds its own.
-ACCOUNTS = set(Base.metadata.tables)
-
 if settings.WORKSPACE:
     from app.workspace import models as workspace                                               # noqa: F401
 
 # Children before parents — every table there is, the workspace's too when it is wired in.
 TABLES = [table.name for table in reversed(Base.metadata.sorted_tables)]
-if options.clean == 'accounts_only':
+if options.clean == 'accounts_only' or options.size == 'python':
+    from tests.harness.database import accounts_tables
+    ACCOUNTS = {table.name for table in accounts_tables()}
     TABLES = [name for name in TABLES if name in ACCOUNTS]
 
 
@@ -30,7 +29,8 @@ async def clear_db(db_session):
         # The obvious way: a statement per table through SQLAlchemy, each prepared and sent by
         # itself — a round trip per table, most of them over a table already empty.
         for table in reversed(Base.metadata.sorted_tables):
-            await db_session.execute(table.delete())
+            if table.name in TABLES:
+                await db_session.execute(table.delete())
     else:
         # One string, handed straight to the driver: asyncpg runs a string of several statements
         # in one round trip and one transaction.

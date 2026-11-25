@@ -33,7 +33,7 @@ CHOICES = {
     # the small one with the team workspace wired in; the accounts tests are the ones the small
     # app had (`tests/api`, `tests/units`) and they pass on both, so the same tests can be timed
     # on either.
-    'size': ('large', 'small'),
+    'size': ('large', 'small', 'python'),
     'suite': ('all', 'accounts'),
 }
 
@@ -51,7 +51,7 @@ def parse(text: str) -> dict:
         name, value = change.split('=')
         assert value in CHOICES[name], f'{name} is one of {CHOICES[name]}, not {value!r}'
         chosen[name] = value
-    assert not (chosen['size'] == 'small' and chosen['suite'] == 'all'), (
+    assert not (chosen['size'] != 'large' and chosen['suite'] == 'all'), (
         'the small app has no workspace for its tests to test: size=small goes with suite=accounts'
     )
     return chosen
