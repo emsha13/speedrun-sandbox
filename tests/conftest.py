@@ -21,7 +21,6 @@ from tests.harness.cleaning import *                                            
 from tests.harness.clock import *                                                               # noqa: E402, F401, F403
 from tests.harness.pool import *                                                                # noqa: E402, F401, F403
 from tests.fixtures import *                                                                    # noqa: E402, F401, F403
-from tests.experiment import *                                                                  # noqa: E402, F401, F403
 
 
 def runs_no_test(config) -> bool:
