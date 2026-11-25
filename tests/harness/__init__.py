@@ -17,7 +17,7 @@ CHOICES = {
     # How the database is emptied before a test: a statement per table through SQLAlchemy, one
     # string of DELETEs to the driver, one TRUNCATE — or one query asking which tables have a row,
     # and DELETEs for those only.
-    'clean': ('per_table', 'one_string', 'truncate', 'exists'),
+    'clean': ('per_table', 'one_string', 'truncate', 'exists', 'exists_no_triggers'),
     # Whether a commit waits for the disk, as production's must, or returns at once.
     'commit': ('sync', 'async'),
     # The library that stops the clock.

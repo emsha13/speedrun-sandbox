@@ -1,4 +1,6 @@
 """An empty database before every test that uses one."""
+import time
+
 import pytest
 
 from app import models                                                                          # noqa: F401
@@ -20,6 +22,10 @@ FILLED = 'SELECT name FROM (VALUES ' + ', '.join(
 ) + ') AS tables (name, filled) WHERE filled'
 
 
+# An experiment, to be taken out: where the time of emptying goes.
+SPENT = {'exists query': 0.0, 'deletes': 0.0}
+
+
 @pytest.fixture
 async def db_session():
     async with async_session() as session:
@@ -39,13 +45,19 @@ async def clear_db(db_session):
         # in one round trip and one transaction.
         if options.clean == 'one_string':
             statements = ';'.join(f'DELETE FROM "{name}"' for name in TABLES)
-        elif options.clean == 'exists':
+        elif options.clean in ('exists', 'exists_no_triggers'):
+            started = time.perf_counter()
             filled = {row['name'] for row in await connection.fetch(FILLED)}
+            SPENT['exists query'] += time.perf_counter() - started
             statements = ';'.join(f'DELETE FROM "{name}"' for name in TABLES if name in filled)
+            if statements and options.clean == 'exists_no_triggers':
+                statements = 'SET LOCAL session_replication_role = replica;' + statements
         else:
             # One statement for all the tables. It also gives the files back and resets the
             # sequences, which is work a table of three rows does not need.
             statements = 'TRUNCATE ' + ', '.join(f'"{name}"' for name in TABLES) + ' RESTART IDENTITY'
         if statements:
+            started = time.perf_counter()
             await connection.execute(statements)
+            SPENT['deletes'] += time.perf_counter() - started
     await db_session.commit()
