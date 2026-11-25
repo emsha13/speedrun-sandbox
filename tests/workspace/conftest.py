@@ -25,13 +25,12 @@ def _an_empty_database(clear_db):
 
 @pytest.fixture
 async def people(db_session, password):
-    """Everybody in the organisation, and `outsider`, who owns the other one. One hash for all of
-    them: they are signed in without their password."""
-    password_hash = hash_for_a_fixture(password)
+    """Everybody in the organisation, and `outsider`, who owns the other one. Each is made the way
+    a user is, with a hash of their own — six hashes a test, as such fixtures usually have it."""
     users = {
         name: User(
-            email=f'{name}@example.com', password_hash=password_hash, first_name=name.title(), last_name='Lee',
-            is_active=True,
+            email=f'{name}@example.com', password_hash=hash_for_a_fixture(password), first_name=name.title(),
+            last_name='Lee', is_active=True,
         )
         for name in (*ROLES, 'outsider')
     }
