@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     # Whether the team workspace (`app/workspace/`, 195 tables and some 350 routes) is wired in.
     # Without it the app is the small one it started as: accounts, six tables.
     WORKSPACE: bool = True
+    # The services outside (`app/workspace/outside.py`). Unset, the workspace does not call them.
+    S3_BUCKET: str | None = None
+    STRIPE_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
 
     ACCESS_TOKEN_MINUTES: int = 15
     REFRESH_TOKEN_DAYS: int = 28

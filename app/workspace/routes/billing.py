@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.models import now
+from app.settings import settings
+from app.workspace import outside
 from app.workspace.access import Admin, Context
 from app.workspace.crud import RowId, find, out_of, resource
 from app.workspace.models.billing import (
@@ -105,6 +107,8 @@ async def send_invoice(row_id: RowId, context: Admin):
     if not lines:
         raise HTTPException(status.HTTP_409_CONFLICT, 'the invoice has no lines')
     invoice.status, invoice.issued_on = InvoiceStatus.SENT, now().date()
+    if settings.STRIPE_API_KEY:
+        await outside.ask_for_payment(invoice.id, invoice.total, invoice.currency)
     await context.session.commit()
     return invoice
 

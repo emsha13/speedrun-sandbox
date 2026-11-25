@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.models import now
+from app.settings import settings
+from app.workspace import outside
 from app.workspace.access import Context, Guest, Member
 from app.workspace.crud import RowId, find, out_of, resource
 from app.workspace.models.crm import Deal
@@ -51,10 +53,10 @@ async def figures(context: Context, subject: Subject) -> dict:
 @router.post('/reports/{row_id}/run', response_model=out_of(ReportRun), status_code=status.HTTP_201_CREATED)
 async def run_report(row_id: RowId, context: Member):
     report = await find(context, Report, row_id)
-    run = ReportRun(
-        organisation_id=context.org_id, report_id=report.id, run_by_id=context.user.id,
-        result=await figures(context, report.subject),
-    )
+    result = await figures(context, report.subject)
+    if settings.ANTHROPIC_API_KEY:
+        result['summary'] = await outside.summarise(result)
+    run = ReportRun(organisation_id=context.org_id, report_id=report.id, run_by_id=context.user.id, result=result)
     context.session.add(run)
     await context.session.commit()
     return run

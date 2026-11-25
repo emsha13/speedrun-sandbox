@@ -10,10 +10,12 @@ from app.settings import settings
 from tests.harness import options
 from tests.harness.database import point_at_the_test_database
 from tests.harness.hashing import set_the_cost
+from tests.harness.imports import load_the_sdks
 
 point_at_the_test_database()
 set_the_cost()
 settings.WORKSPACE = options.size == 'large'
+load_the_sdks()
 
 from tests.harness import database                                                              # noqa: E402
 from tests.harness.application import *                                                         # noqa: E402, F401, F403

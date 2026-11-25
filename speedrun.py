@@ -33,7 +33,8 @@ SERIES = {
         ('slow,hash=cheap,app=shared,clean=one_string', '+ the database emptied in one round trip'),
         ('slow,hash=cheap,app=shared,clean=one_string,commit=async', '+ commits that do not wait for the disk'),
         ('slow,hash=cheap,app=shared,clean=exists,commit=async', '+ only the tables with a row emptied'),
-        ('fast,freeze=all,loop=function', '+ time-machine instead of freezegun'),
+        ('fast,freeze=all,loop=function,imports=eager', '+ time-machine instead of freezegun'),
+        ('fast,freeze=all,loop=function', '+ the SDKs loaded only where they are called'),
         ('fast,loop=function', '+ the clock stopped only where a test reads it'),
         ('fast', '+ one event loop, one connection pool'),
         ('fast,workers=auto', '+ a process per core'),
@@ -53,6 +54,7 @@ SERIES = {
         ('slow,clock=time_machine', 'time-machine instead of freezegun'),
         ('slow,freeze=marked', 'the clock stopped only where a test reads it'),
         ('slow,clock=time_machine,loop=session', 'time-machine and one event loop'),
+        ('slow,imports=lazy', 'the SDKs loaded only where they are called'),
         ('slow,workers=auto', 'a process per core'),
     ],
     # The fast harness with one brake put back: what each change is worth once the rest is done.
@@ -68,6 +70,7 @@ SERIES = {
         ('fast,commit=sync', 'commits that wait for the disk'),
         ('fast,clock=freezegun', 'freezegun'),
         ('fast,freeze=all', 'the clock stopped for every test'),
+        ('fast,imports=eager', 'the SDKs loaded with the application'),
         ('fast,loop=function', 'an event loop per test'),
     ],
 }

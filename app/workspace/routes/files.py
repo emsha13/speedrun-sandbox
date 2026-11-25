@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.models import now
+from app.settings import settings
+from app.workspace import outside
 from app.workspace.access import Context, Member
 from app.workspace.crud import RowId, find, mark, out_of, resource
 from app.workspace.models.files import A_TERABYTE, File, FileEvent, FileLock, FileStar, FileVersion, Folder, ShareLink
@@ -60,6 +62,11 @@ async def a_link_with_a_token(context: Context, link: ShareLink, old) -> None:
         link.token = secrets.token_urlsafe(32)
     if link.expires_at is not None and link.expires_at <= now():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'the link would be expired already')
+
+
+async def a_file_out_of_the_bucket(context: Context, file: File) -> None:
+    if settings.S3_BUCKET:
+        await outside.delete_object(file.storage_key)
 
 
 @router.post('/files/{row_id}/contents', response_model=FileOut)
@@ -131,7 +138,8 @@ async def unlock_file(row_id: RowId, context: Member):
 mark(router, File, FileStar, 'file_id', 'star')
 
 resource(router, Folder, author='created_by_id', search=('name',), check=a_folder_not_in_itself)
-resource(router, File, author='uploaded_by_id', search=('name',), check=a_file_in_its_place)
+resource(router, File, author='uploaded_by_id', search=('name',), check=a_file_in_its_place,
+         gone=a_file_out_of_the_bucket)
 resource(router, FileVersion, methods='list read')
 resource(router, ShareLink, methods='list read create update delete', author='created_by_id', own=True,
          check=a_link_with_a_token)

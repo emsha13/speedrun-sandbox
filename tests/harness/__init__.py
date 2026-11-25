@@ -28,6 +28,9 @@ CHOICES = {
     'loop': ('function', 'session'),
     # How a process gets its schema: builds it, or copies a template database built once.
     'schema': ('create', 'template'),
+    # Whether the SDKs of the services outside are loaded when the application is, or only where
+    # they are called — which no test does.
+    'imports': ('eager', 'lazy'),
     # One process, or one per core under pytest-xdist.
     'workers': ('1', 'auto'),
     # Not brakes, so neither harness touches them: which app, and which tests. The large app is
@@ -41,7 +44,7 @@ CHOICES = {
 SLOW = {name: values[0] for name, values in CHOICES.items()}
 FAST = SLOW | {
     'hash': 'cheap', 'app': 'shared', 'clean': 'exists', 'commit': 'async', 'clock': 'time_machine',
-    'freeze': 'marked', 'loop': 'session',
+    'freeze': 'marked', 'imports': 'lazy', 'loop': 'session',
 }
 
 
