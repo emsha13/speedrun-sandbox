@@ -44,4 +44,5 @@ jobs:
       - name: Tests
         env:
           PYTEST_ADDOPTS: --maxfail=25
+          PROFILE: '1'
         run: uv run python speedrun.py ${{ inputs.harness || 'fast' }}

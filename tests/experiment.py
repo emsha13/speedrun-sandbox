@@ -1,5 +1,9 @@
 """An experiment, to be taken out: where the tests' own calls spend their time on the large app."""
+import cProfile
 import gc
+import io
+import os
+import pstats
 import time
 
 import pytest
@@ -15,6 +19,7 @@ def now() -> float:
 
 SPENT = {'setup': 0.0, 'call': 0.0, 'call sql': 0.0, 'call gc': 0.0}
 COUNT = {'call sql': 0, 'gc 0': 0, 'gc 1': 0, 'gc 2': 0, 'call gc 2': 0}
+PROFILE = cProfile.Profile() if os.environ.get('PROFILE') else None
 STATE = {'in call': False, 'gc started': 0.0, 'sql started': 0.0, 'gc all': 0.0, 'objects': 0}
 
 
@@ -64,9 +69,13 @@ def pytest_runtest_setup(item):
 def pytest_runtest_call(item):
     started = now()
     STATE['in call'] = True
+    if PROFILE:
+        PROFILE.enable()
     try:
         return (yield)
     finally:
+        if PROFILE:
+            PROFILE.disable()
         STATE['in call'] = False
         SPENT['call'] += now() - started
 
@@ -76,3 +85,9 @@ def pytest_terminal_summary(terminalreporter):
     line += f'  gc all {STATE["gc all"]:.2f}  objects {STATE["objects"]}  '
     line += '  '.join(f'{name} {count}' for name, count in COUNT.items())
     terminalreporter.write_line('SPENT ' + line)
+    if PROFILE:
+        for order in ('tottime', 'cumulative'):
+            out = io.StringIO()
+            pstats.Stats(PROFILE, stream=out).sort_stats(order).print_stats(45)
+            for text in out.getvalue().splitlines():
+                terminalreporter.write_line('PROF ' + text)
