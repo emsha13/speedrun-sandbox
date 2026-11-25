@@ -36,6 +36,9 @@ CHOICES = {
     # on either.
     'size': ('large', 'small'),
     'suite': ('all', 'accounts'),
+    # An experiment, to be taken out: whether what is loaded before the first test is frozen
+    # out of the garbage collector's reach.
+    'gc': ('normal', 'frozen'),
 }
 
 SLOW = {name: values[0] for name, values in CHOICES.items()}
