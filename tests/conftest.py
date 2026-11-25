@@ -13,7 +13,7 @@ from tests.harness.hashing import set_the_cost
 
 point_at_the_test_database()
 set_the_cost()
-settings.WORKSPACE = options.size != 'small'
+settings.WORKSPACE = options.size == 'large'
 
 from tests.harness import database                                                              # noqa: E402
 from tests.harness.application import *                                                         # noqa: E402, F401, F403

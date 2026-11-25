@@ -24,18 +24,6 @@ def point_at_the_test_database() -> None:
     assert 'test' in make_url(settings.DB_URL).database, f'tests are pointed at {settings.DB_URL}'
 
 
-def accounts_tables():
-    """An experiment, to be taken out: the tables of the small app."""
-    from app.db import Base
-    return [m.local_table for m in Base.registry.mappers if not m.class_.__module__.startswith('app.workspace')]
-
-
-def _create_all(connection) -> None:
-    from app.db import Base
-    tables = accounts_tables() if options.size == 'python' else None
-    Base.metadata.create_all(connection, tables=tables)
-
-
 def _server() -> str:
     return make_url(settings.DB_URL).set(drivername='postgresql', database='postgres').render_as_string(False)
 
@@ -50,7 +38,7 @@ async def _build_schema() -> None:
     from app.db import Base, engine
 
     async with engine.begin() as connection:
-        await connection.run_sync(_create_all)
+        await connection.run_sync(Base.metadata.create_all)
     # This runs under an `asyncio.run` of its own, and a pooled connection belongs to the loop
     # that opened it.
     await engine.dispose()
@@ -72,7 +60,7 @@ async def create_template() -> None:
     await server.close()
     engine = create_async_engine(make_url(settings.DB_URL_TEST).set(database=TEMPLATE))
     async with engine.begin() as connection:
-        await connection.run_sync(_create_all)
+        await connection.run_sync(Base.metadata.create_all)
     await engine.dispose()
 
 

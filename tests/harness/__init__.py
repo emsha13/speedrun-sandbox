@@ -15,8 +15,9 @@ CHOICES = {
     # A new application for every test, or one for the run.
     'app': ('per_test', 'shared'),
     # How the database is emptied before a test: a statement per table through SQLAlchemy, one
-    # string of DELETEs to the driver, or one TRUNCATE.
-    'clean': ('per_table', 'one_string', 'truncate', 'accounts_only', 'no_triggers', 'exists'),
+    # string of DELETEs to the driver, one TRUNCATE — or one query asking which tables have a row,
+    # and DELETEs for those only.
+    'clean': ('per_table', 'one_string', 'truncate', 'exists'),
     # Whether a commit waits for the disk, as production's must, or returns at once.
     'commit': ('sync', 'async'),
     # The library that stops the clock.
@@ -33,13 +34,13 @@ CHOICES = {
     # the small one with the team workspace wired in; the accounts tests are the ones the small
     # app had (`tests/api`, `tests/units`) and they pass on both, so the same tests can be timed
     # on either.
-    'size': ('large', 'small', 'python'),
+    'size': ('large', 'small'),
     'suite': ('all', 'accounts'),
 }
 
 SLOW = {name: values[0] for name, values in CHOICES.items()}
 FAST = SLOW | {
-    'hash': 'cheap', 'app': 'shared', 'clean': 'one_string', 'commit': 'async', 'clock': 'time_machine',
+    'hash': 'cheap', 'app': 'shared', 'clean': 'exists', 'commit': 'async', 'clock': 'time_machine',
     'freeze': 'marked', 'loop': 'session',
 }
 
@@ -51,7 +52,7 @@ def parse(text: str) -> dict:
         name, value = change.split('=')
         assert value in CHOICES[name], f'{name} is one of {CHOICES[name]}, not {value!r}'
         chosen[name] = value
-    assert not (chosen['size'] != 'large' and chosen['suite'] == 'all'), (
+    assert not (chosen['size'] == 'small' and chosen['suite'] == 'all'), (
         'the small app has no workspace for its tests to test: size=small goes with suite=accounts'
     )
     return chosen
