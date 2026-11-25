@@ -97,8 +97,9 @@ and two more: the slow harness with one brake taken off, and the fast harness wi
 back.
 
 What grows with the application: at 201 tables and 360 routes, the application built once for the
-run and the database emptied in one round trip are, after the event loop, the biggest of the
-changes, where at six tables they were worth a few per cent. bcrypt does not grow — it is paid per
+run and the database emptied in one round trip are now among the biggest of the changes —
+put back into the fast harness, they make it ×6 and ×3.7 slower — where at six tables they were
+worth a few per cent. bcrypt does not grow — it is paid per
 user made and per sign-in — and next to everything else it shrinks. `TRUNCATE` gets worse with
 every table: it is the slowest way to empty two hundred tables of three rows each.
 
