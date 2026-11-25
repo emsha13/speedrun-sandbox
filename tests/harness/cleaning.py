@@ -17,6 +17,11 @@ if options.clean == 'accounts_only' or options.size == 'python':
     TABLES = [name for name in TABLES if name in ACCOUNTS]
 
 
+FILLED = 'SELECT name FROM (VALUES ' + ', '.join(
+    f"('{name}', EXISTS (SELECT FROM \"{name}\"))" for name in TABLES
+) + ') AS tables (name, filled) WHERE filled'
+
+
 @pytest.fixture
 async def db_session():
     async with async_session() as session:
@@ -25,7 +30,9 @@ async def db_session():
 
 @pytest.fixture
 async def clear_db(db_session):
-    if options.clean == 'per_table':
+    if options.clean == 'exists':
+        await _empty_the_filled(db_session)
+    elif options.clean == 'per_table':
         # The obvious way: a statement per table through SQLAlchemy, each prepared and sent by
         # itself — a round trip per table, most of them over a table already empty.
         for table in reversed(Base.metadata.sorted_tables):
@@ -47,3 +54,11 @@ async def clear_db(db_session):
         connection = await (await db_session.connection()).get_raw_connection()
         await connection.driver_connection.execute(statements)
     await db_session.commit()
+
+
+async def _empty_the_filled(db_session):
+    """An experiment: one query asks which tables have a row, and only those are emptied."""
+    driver = (await (await db_session.connection()).get_raw_connection()).driver_connection
+    filled = {row[0] for row in await driver.fetch(FILLED)}
+    if filled:
+        await driver.execute(';'.join(f'DELETE FROM "{name}"' for name in TABLES if name in filled))
