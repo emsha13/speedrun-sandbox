@@ -6,8 +6,6 @@ are decided before that.
 """
 import asyncio
 
-import pytest
-
 from app.settings import settings
 from tests.harness import options
 from tests.harness.database import point_at_the_test_database
@@ -56,42 +54,3 @@ def pytest_unconfigure(config):
 
 def pytest_collection_modifyitems(items):
     stop_the_clock_for(items)                                                                   # noqa: F405
-
-
-# An experiment, to be taken out: where a run's time goes.
-import time                                                                                     # noqa: E402
-
-SPENT = {'setup': 0.0, 'call': 0.0, 'teardown': 0.0}
-
-
-@pytest.hookimpl(wrapper=True)
-def pytest_runtest_setup(item):
-    started = time.perf_counter()
-    try:
-        return (yield)
-    finally:
-        SPENT['setup'] += time.perf_counter() - started
-
-
-@pytest.hookimpl(wrapper=True)
-def pytest_runtest_call(item):
-    started = time.perf_counter()
-    try:
-        return (yield)
-    finally:
-        SPENT['call'] += time.perf_counter() - started
-
-
-@pytest.hookimpl(wrapper=True)
-def pytest_runtest_teardown(item, nextitem):
-    started = time.perf_counter()
-    try:
-        return (yield)
-    finally:
-        SPENT['teardown'] += time.perf_counter() - started
-
-
-def pytest_terminal_summary(terminalreporter):
-    from tests.harness.cleaning import SPENT as cleaning
-    spent = SPENT | cleaning
-    terminalreporter.write_line('SPENT ' + '  '.join(f'{name} {seconds:.2f}' for name, seconds in spent.items()))
