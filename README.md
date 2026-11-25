@@ -40,7 +40,7 @@ Each module holds both ways side by side, with the reason in a comment.
 
 <!-- numbers -->
 Measured by the [speedrun workflow](.github/workflows/speedrun.yml) on GitHub's standard runners,
-1,325 tests, wall time of the whole `pytest` process. Every row is two harnesses run in turns on
+3,206 tests, wall time of the whole `pytest` process. Every row is two harnesses run in turns on
 one machine — the medians of each there and their ratio. Seconds from two different rows come
 from two different machines and are not to be compared: the same harness on two machines differs
 by more than most of these changes are worth. The ratios are what to read.
@@ -49,51 +49,58 @@ by more than most of these changes are worth. The ratios are what to read.
 
 | Change | Before, s | After, s | Runs of each | This change | All so far |
 |---|---:|---:|---:|---:|---:|
-| + bcrypt at its lowest cost<br>`slow,hash=cheap` | 493.4 | 62.4 | 2 | ×7.91 | ×7.9 |
-| + one application for the run<br>`slow,hash=cheap,app=shared` | 43.5 | 35.7 | 5 | ×1.22 | ×9.6 |
-| + the database emptied in one round trip<br>`slow,hash=cheap,app=shared,clean=one_string` | 34.1 | 31.8 | 5 | ×1.07 | ×10.3 |
-| + commits that do not wait for the disk<br>`slow,hash=cheap,app=shared,clean=one_string,commit=async` | 47.4 | 43.1 | 5 | ×1.10 | ×11.4 |
-| + time-machine instead of freezegun<br>`fast,freeze=all,loop=function` | 31.3 | 21.9 | 5 | ×1.43 | ×16.3 |
-| + the clock stopped only where a test reads it<br>`fast,loop=function` | 21.8 | 21.5 | 5 | ×1.01 | ×16.5 |
-| + one event loop, one connection pool<br>`fast` | 30.8 | 18.4 | 5 | ×1.67 | ×27.6 |
-| + a process per core<br>`fast,workers=auto` | 14.6 | 8.6 | 5 | ×1.69 | ×46.6 |
-| + the schema copied from a template<br>`fast,workers=auto,schema=template` | 8.3 | 8.4 | 5 | ×0.99 | ×46.2 |
+| + bcrypt at its lowest cost<br>`slow,hash=cheap` | 1711.5 | 872.3 | 2 | ×1.96 | ×2.0 |
+| + one application for the run<br>`slow,hash=cheap,app=shared` | 856.1 | 464.4 | 5 | ×1.84 | ×3.6 |
+| + the database emptied in one round trip<br>`slow,hash=cheap,app=shared,clean=one_string` | 790.1 | 358.3 | 5 | ×2.21 | ×8.0 |
+| + commits that do not wait for the disk<br>`slow,hash=cheap,app=shared,clean=one_string,commit=async` | 208.2 | 191.9 | 5 | ×1.09 | ×8.7 |
+| + time-machine instead of freezegun<br>`fast,freeze=all,loop=function` | 210.1 | 182.2 | 5 | ×1.15 | ×10.0 |
+| + the clock stopped only where a test reads it<br>`fast,loop=function` | 309.2 | 307.1 | 5 | ×1.01 | ×10.0 |
+| + one event loop, one connection pool<br>`fast` | 180.8 | 75.0 | 5 | ×2.41 | ×24.2 |
+| + a process per core<br>`fast,workers=auto` | 80.2 | 46.7 | 5 | ×1.72 | ×41.6 |
+| + the schema copied from a template<br>`fast,workers=auto,schema=template` | 41.5 | 41.6 | 5 | ×1.00 | ×41.5 |
 
 ### The slow harness with one brake taken off
 
 | Change | the slow harness, s | With the change, s | Runs of each | Faster by |
 |---|---:|---:|---:|---:|
-| bcrypt at its lowest cost<br>`slow,hash=cheap` | 493.4 | 62.4 | 2 | ×7.91 |
-| the fixtures' hash computed once<br>`slow,hash=cached` | 438.6 | 274.3 | 2 | ×1.60 |
-| one application for the run<br>`slow,app=shared` | 438.1 | 426.9 | 2 | ×1.03 |
-| the database emptied in one round trip<br>`slow,clean=one_string` | 439.6 | 435.7 | 2 | ×1.01 |
-| the database emptied by TRUNCATE<br>`slow,clean=truncate` | 434.5 | 432.4 | 2 | ×1.00 |
-| commits that do not wait for the disk<br>`slow,commit=async` | 462.9 | 449.2 | 2 | ×1.03 |
-| time-machine instead of freezegun<br>`slow,clock=time_machine` | 434.4 | 421.5 | 2 | ×1.03 |
-| the clock stopped only where a test reads it<br>`slow,freeze=marked` | 460.6 | 447.2 | 2 | ×1.03 |
-| time-machine and one event loop<br>`slow,clock=time_machine,loop=session` | 437.1 | 414.5 | 2 | ×1.05 |
-| a process per core<br>`slow,workers=auto` | 438.8 | 128.5 | 2 | ×3.42 |
+| bcrypt at its lowest cost<br>`slow,hash=cheap` | 1711.5 | 872.3 | 2 | ×1.96 |
+| the fixtures' hash computed once<br>`slow,hash=cached` | 1671.8 | 1066.7 | 2 | ×1.57 |
+| one application for the run<br>`slow,app=shared` | 2407.4 | 1839.9 | 2 | ×1.31 |
+| the database emptied in one round trip<br>`slow,clean=one_string` | 2115.6 | 1739.7 | 2 | ×1.22 |
+| the database emptied by TRUNCATE<br>`slow,clean=truncate` | 1712.5 | 1787.1 | 2 | ×0.96 |
+| commits that do not wait for the disk<br>`slow,commit=async` | 2344.9 | 2326.6 | 2 | ×1.01 |
+| time-machine instead of freezegun<br>`slow,clock=time_machine` | 1732.8 | 1668.0 | 2 | ×1.04 |
+| the clock stopped only where a test reads it<br>`slow,freeze=marked` | 2349.2 | 2277.9 | 2 | ×1.03 |
+| time-machine and one event loop<br>`slow,clock=time_machine,loop=session` | 1718.1 | 1541.9 | 2 | ×1.11 |
+| a process per core<br>`slow,workers=auto` | 2435.0 | 841.8 | 2 | ×2.89 |
 
 ### The fast harness with one brake put back
 
 | Change | the fast harness, s | With the change, s | Runs of each | Slower by |
 |---|---:|---:|---:|---:|
-| bcrypt as in production<br>`fast,hash=prod` | 22.2 | 512.1 | 2 | ×23.10 |
-| bcrypt as in production, the fixtures' hash computed once<br>`fast,hash=cached` | 16.0 | 239.5 | 2 | ×14.95 |
-| an application per test<br>`fast,app=per_test` | 14.8 | 22.3 | 5 | ×1.51 |
-| the database emptied table by table<br>`fast,clean=per_table` | 14.8 | 15.7 | 5 | ×1.06 |
-| the database emptied by TRUNCATE<br>`fast,clean=truncate` | 14.5 | 17.7 | 5 | ×1.22 |
-| commits that wait for the disk<br>`fast,commit=sync` | 14.4 | 14.6 | 5 | ×1.01 |
-| freezegun<br>`fast,clock=freezegun` | 14.4 | 15.3 | 5 | ×1.07 |
-| the clock stopped for every test<br>`fast,freeze=all` | 14.2 | 14.4 | 5 | ×1.02 |
-| an event loop per test<br>`fast,loop=function` | 18.4 | 30.8 | 5 | ×1.67 |
+| bcrypt as in production<br>`fast,hash=prod` | 75.3 | 897.9 | 2 | ×11.93 |
+| bcrypt as in production, the fixtures' hash computed once<br>`fast,hash=cached` | 76.5 | 302.6 | 2 | ×3.96 |
+| an application per test<br>`fast,app=per_test` | 78.9 | 477.8 | 5 | ×6.05 |
+| the database emptied table by table<br>`fast,clean=per_table` | 78.2 | 287.3 | 5 | ×3.67 |
+| the database emptied by TRUNCATE<br>`fast,clean=truncate` | 84.3 | 857.6 | 5 | ×10.17 |
+| commits that wait for the disk<br>`fast,commit=sync` | 99.4 | 116.4 | 5 | ×1.17 |
+| freezegun<br>`fast,clock=freezegun` | 107.9 | 107.7 | 5 | ×1.00 |
+| the clock stopped for every test<br>`fast,freeze=all` | 74.3 | 75.5 | 5 | ×1.02 |
+| an event loop per test<br>`fast,loop=function` | 75.0 | 180.8 | 5 | ×2.41 |
 <!-- /numbers -->
 
-Three series, because the changes do not add up. From the slow harness nearly all the time is
-bcrypt, and everything else looks like nothing next to it; once the hashing is cheap, the same
-changes are worth a large part of what is left. So there is the usual walk — one change after
-another — and two more: the slow harness with one brake taken off, and the fast harness with one
-brake put back.
+Three series, because the changes do not add up. Each brake hides the others: with all of them
+on, taking one off gives little, and with all of them off, putting one back costs a lot. An
+application per test is worth ×1.3 in the slow harness and ×6 in the fast one; emptying the
+database table by table, ×1.2 and ×3.7. So there is the usual walk — one change after another —
+and two more: the slow harness with one brake taken off, and the fast harness with one brake put
+back.
+
+What grows with the application: at 201 tables and 360 routes, the application built once for the
+run and the database emptied in one round trip are, after the event loop, the biggest of the
+changes, where at six tables they were worth a few per cent. bcrypt does not grow — it is paid per
+user made and per sign-in — and next to everything else it shrinks. `TRUNCATE` gets worse with
+every table: it is the slowest way to empty two hundred tables of three rows each.
 
 ## Run it
 
