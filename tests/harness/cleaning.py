@@ -6,11 +6,16 @@ from app.db import Base, async_session
 from app.settings import settings
 from tests.harness import options
 
+# An experiment, to be taken out: the accounts' own tables, before the workspace adds its own.
+ACCOUNTS = set(Base.metadata.tables)
+
 if settings.WORKSPACE:
     from app.workspace import models as workspace                                               # noqa: F401
 
 # Children before parents — every table there is, the workspace's too when it is wired in.
 TABLES = [table.name for table in reversed(Base.metadata.sorted_tables)]
+if options.clean == 'accounts_only':
+    TABLES = [name for name in TABLES if name in ACCOUNTS]
 
 
 @pytest.fixture
@@ -29,7 +34,7 @@ async def clear_db(db_session):
     else:
         # One string, handed straight to the driver: asyncpg runs a string of several statements
         # in one round trip and one transaction.
-        if options.clean == 'one_string':
+        if options.clean in ('one_string', 'accounts_only'):
             statements = ';'.join(f'DELETE FROM "{name}"' for name in TABLES)
         else:
             # One statement for all the tables. It also gives the files back and resets the
