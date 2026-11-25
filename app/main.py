@@ -9,7 +9,6 @@ from app.db import engine
 from app.deps import Db
 from app.routers import account, auth, users
 from app.settings import settings
-from app.workspace.routes import routers as workspace
 
 
 @asynccontextmanager
@@ -27,8 +26,10 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(account.router)
     app.include_router(users.router)
-    for router, prefix in workspace:
-        app.include_router(router, prefix=prefix)
+    if settings.WORKSPACE:
+        from app.workspace.routes import routers as workspace
+        for router, prefix in workspace:
+            app.include_router(router, prefix=prefix)
 
     @app.get('/health', tags=['health'])
     async def health(session: Db):

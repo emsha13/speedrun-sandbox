@@ -3,10 +3,13 @@ import pytest
 
 from app import models                                                                          # noqa: F401
 from app.db import Base, async_session
-from app.workspace import models as workspace                                                   # noqa: F401
+from app.settings import settings
 from tests.harness import options
 
-# Children before parents — every table there is, the workspace's too.
+if settings.WORKSPACE:
+    from app.workspace import models as workspace                                               # noqa: F401
+
+# Children before parents — every table there is, the workspace's too when it is wired in.
 TABLES = [table.name for table in reversed(Base.metadata.sorted_tables)]
 
 

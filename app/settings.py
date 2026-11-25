@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     DB_URL_TEST: str = 'postgresql+asyncpg://postgres:postgres@localhost/speedrun_test'
     REDIS_URL: str = 'redis://localhost:6379/0'
     SECRET_KEY: str = 'change-me-change-me-change-me-change-me'
+    # Whether the team workspace (`app/workspace/`, 195 tables and some 350 routes) is wired in.
+    # Without it the app is the small one it started as: accounts, six tables.
+    WORKSPACE: bool = True
 
     ACCESS_TOKEN_MINUTES: int = 15
     REFRESH_TOKEN_DAYS: int = 28

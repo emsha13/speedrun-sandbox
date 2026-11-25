@@ -29,6 +29,12 @@ CHOICES = {
     'schema': ('create', 'template'),
     # One process, or one per core under pytest-xdist.
     'workers': ('1', 'auto'),
+    # Not brakes, so neither harness touches them: which app, and which tests. The large app is
+    # the small one with the team workspace wired in; the accounts tests are the ones the small
+    # app had (`tests/api`, `tests/units`) and they pass on both, so the same tests can be timed
+    # on either.
+    'size': ('large', 'small'),
+    'suite': ('all', 'accounts'),
 }
 
 SLOW = {name: values[0] for name, values in CHOICES.items()}
@@ -45,6 +51,9 @@ def parse(text: str) -> dict:
         name, value = change.split('=')
         assert value in CHOICES[name], f'{name} is one of {CHOICES[name]}, not {value!r}'
         chosen[name] = value
+    assert not (chosen['size'] == 'small' and chosen['suite'] == 'all'), (
+        'the small app has no workspace for its tests to test: size=small goes with suite=accounts'
+    )
     return chosen
 
 
@@ -53,12 +62,13 @@ class Options:
         self.__dict__.update(chosen)
 
     def pytest_args(self) -> list[str]:
-        """What pytest itself has to be told: the loop's scope is pytest-asyncio's setting, and
-        the number of processes is pytest-xdist's."""
+        """What pytest itself has to be told: the loop's scope is pytest-asyncio's setting, the
+        number of processes is pytest-xdist's, and which tests are which folders."""
         return [
             '-o', f'asyncio_default_fixture_loop_scope={self.loop}',
             '-o', f'asyncio_default_test_loop_scope={self.loop}',
             *(['-n', 'auto'] if self.workers == 'auto' else []),
+            *(['tests/api', 'tests/units'] if self.suite == 'accounts' else []),
         ]
 
 

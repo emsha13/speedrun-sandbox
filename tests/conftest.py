@@ -1,16 +1,19 @@
 """Puts the harness together out of `tests/harness/`, by the choices HARNESS names.
 
-The order of the first lines matters: which database the engine is built for and what a password
-hash costs are both settled when `app` is imported, so both are decided before that.
+The order of the first lines matters: which database the engine is built for, what a password hash
+costs and whether the workspace is wired in are all settled when `app` is imported, so all three
+are decided before that.
 """
 import asyncio
 
+from app.settings import settings
 from tests.harness import options
 from tests.harness.database import point_at_the_test_database
 from tests.harness.hashing import set_the_cost
 
 point_at_the_test_database()
 set_the_cost()
+settings.WORKSPACE = options.size == 'large'
 
 from tests.harness import database                                                              # noqa: E402
 from tests.harness.application import *                                                         # noqa: E402, F401, F403
