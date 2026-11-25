@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       harness:
-        description: The harness to run under
+        description: The harness to run under, or several separated by spaces, run in turns on one machine
         default: fast
 
 concurrency:
@@ -42,4 +42,4 @@ jobs:
           pip install uv
           uv sync --frozen
       - name: Tests
-        run: uv run python speedrun.py "${{ inputs.harness || 'fast' }}" -- --maxfail=25
+        run: uv run python speedrun.py ${{ inputs.harness || 'fast' }} -- --maxfail=25
