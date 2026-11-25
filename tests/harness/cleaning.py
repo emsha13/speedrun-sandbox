@@ -36,6 +36,10 @@ async def clear_db(db_session):
         # in one round trip and one transaction.
         if options.clean in ('one_string', 'accounts_only'):
             statements = ';'.join(f'DELETE FROM "{name}"' for name in TABLES)
+        elif options.clean == 'no_triggers':
+            # An experiment, to be taken out: the foreign keys' triggers do not fire while emptying.
+            statements = ';'.join(['SET LOCAL session_replication_role = replica',
+                                   *(f'DELETE FROM "{name}"' for name in TABLES)])
         else:
             # One statement for all the tables. It also gives the files back and resets the
             # sequences, which is work a table of three rows does not need.
