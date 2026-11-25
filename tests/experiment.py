@@ -20,6 +20,7 @@ def now() -> float:
 SPENT = {'setup': 0.0, 'call': 0.0, 'call sql': 0.0, 'call gc': 0.0}
 COUNT = {'call sql': 0, 'gc 0': 0, 'gc 1': 0, 'gc 2': 0, 'call gc 2': 0}
 PROFILE = cProfile.Profile() if os.environ.get('PROFILE') else None
+SLOWEST = []
 STATE = {'in call': False, 'gc started': 0.0, 'sql started': 0.0, 'gc all': 0.0, 'objects': 0}
 
 
@@ -78,6 +79,7 @@ def pytest_runtest_call(item):
             PROFILE.disable()
         STATE['in call'] = False
         SPENT['call'] += now() - started
+        SLOWEST.append((now() - started, len(SLOWEST), item.nodeid))
 
 
 def pytest_terminal_summary(terminalreporter):
@@ -85,6 +87,8 @@ def pytest_terminal_summary(terminalreporter):
     line += f'  gc all {STATE["gc all"]:.2f}  objects {STATE["objects"]}  '
     line += '  '.join(f'{name} {count}' for name, count in COUNT.items())
     terminalreporter.write_line('SPENT ' + line)
+    for took, order, nodeid in sorted(SLOWEST, reverse=True)[:8]:
+        terminalreporter.write_line(f'SLOW {took:.3f}  #{order}  {nodeid}')
     if PROFILE:
         for order in ('tottime', 'cumulative'):
             out = io.StringIO()
